@@ -32,7 +32,7 @@ const MISSION_TEMPLATES = [
 ];
 
 const DEFAULT_STATE = {
-  coins: 100,
+  coins: 350,
   level: 1,
   xp: 0,
   maxXp: 100,
