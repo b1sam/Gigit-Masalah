@@ -1,0 +1,130 @@
+{
+	"info": {
+		"_postman_id": "38cf4d1a-9b75-4f37-b815-655565f6044d",
+		"name": "Presensi",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1240534"
+	},
+	"item": [
+		{
+			"name": "1. Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "name",
+							"value": "Septiawan Aji",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "email",
+							"value": "pegawai_a@gmail.com",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "password",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/login",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Get Presensi",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/get-presensi",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"get-presensi"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Simpan Presensi",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "2|N0QOqnsEwlZYA0uz9tmL1Q4B7y8NvuFSU7LcBJq0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "keterangan",
+							"value": "MASUK",
+							"type": "text"
+						},
+						{
+							"key": "latitude",
+							"value": "-7.457560",
+							"type": "text"
+						},
+						{
+							"key": "longitude",
+							"value": "109.298798",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/save-presensi",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"save-presensi"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

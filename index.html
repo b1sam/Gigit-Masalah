@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gigit Masalah</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <!-- Damage/feedback flash overlay — brief red pulse on failure events
+       (line snapped, fish escaped). Sits outside #ui-overlay so it never
+       inherits pointer-events:auto and can never block taps. -->
+  <div id="damage-flash"></div>
+  <div id="celebration-flash"></div>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  MAIN MENU / START SCREEN    ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <div id="screen-mainmenu" class="fullscreen-menu">
+    <div class="menu-card">
+      <div class="menu-logo">
+        <div class="menu-logo-icon">🎣</div>
+        <h1 class="menu-title">Gigit Masalah</h1>
+        <p class="menu-subtitle" data-i18n="menu_subtitle">Game Memancing 3D Bertema Kadal</p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-menu-start" class="menu-btn primary">
+          <i class="fa-solid fa-play"></i> <span id="btn-menu-start-label">MULAI</span>
+        </button>
+        <button id="btn-menu-settings" class="menu-btn">
+          <i class="fa-solid fa-gear"></i> <span data-i18n="menu_settings">Pengaturan</span>
+        </button>
+        <button id="btn-menu-credits" class="menu-btn">
+          <i class="fa-solid fa-heart"></i> <span data-i18n="menu_credits">Kredit</span>
+        </button>
+        <button id="btn-menu-quit" class="menu-btn subtle">
+          <i class="fa-solid fa-door-open"></i> <span data-i18n="menu_quit">Keluar</span>
+        </button>
+      </div>
+      <p class="menu-footer" data-i18n="menu_footer">Dibuat dengan Three.js · Sekolah Project</p>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  PAUSE MENU                  ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <div id="screen-pausemenu" class="fullscreen-menu hidden">
+    <div class="menu-card">
+      <div class="menu-logo">
+        <div class="menu-logo-icon">⏸️</div>
+        <h1 class="menu-title" style="font-size:26px;" data-i18n="pause_title">Jeda</h1>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-pause-resume" class="menu-btn primary">
+          <i class="fa-solid fa-play"></i> <span data-i18n="pause_resume">Lanjutkan</span>
+        </button>
+        <button id="btn-pause-settings" class="menu-btn">
+          <i class="fa-solid fa-gear"></i> <span data-i18n="pause_settings">Pengaturan</span>
+        </button>
+        <button id="btn-pause-credits" class="menu-btn">
+          <i class="fa-solid fa-heart"></i> <span data-i18n="pause_credits">Kredit</span>
+        </button>
+        <button id="btn-pause-restart" class="menu-btn subtle">
+          <i class="fa-solid fa-rotate-right"></i> <span data-i18n="pause_restart">Restart</span>
+        </button>
+        <button id="btn-pause-mainmenu" class="menu-btn subtle">
+          <i class="fa-solid fa-house"></i> <span data-i18n="pause_mainmenu">Menu Utama</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  SETTINGS PANEL (shared)     ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <div id="modal-settings" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-gear"></i> <span data-i18n="settings_title">Pengaturan</span></h2>
+        <button id="btn-close-settings" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="settings-row">
+        <span><i class="fa-solid fa-volume-high"></i> <span data-i18n="settings_audio">Audio (Musik &amp; Efek Suara)</span></span>
+        <button id="settings-toggle-sound" class="settings-toggle">ON</button>
+      </div>
+
+      <div class="settings-row">
+        <span><i class="fa-solid fa-image"></i> <span data-i18n="settings_graphics">Kualitas Grafis</span></span>
+        <div class="settings-segmented">
+          <button id="settings-quality-high" class="settings-seg-btn active" data-i18n="settings_quality_high">Tinggi</button>
+          <button id="settings-quality-low" class="settings-seg-btn" data-i18n="settings_quality_low">Rendah</button>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span><i class="fa-solid fa-gamepad"></i> <span data-i18n="settings_sensitivity">Sensitivitas Kamera</span></span>
+        <div class="settings-segmented">
+          <button id="settings-sens-low" class="settings-seg-btn" data-i18n="settings_sens_low">Rendah</button>
+          <button id="settings-sens-mid" class="settings-seg-btn active" data-i18n="settings_sens_mid">Sedang</button>
+          <button id="settings-sens-high" class="settings-seg-btn" data-i18n="settings_sens_high">Tinggi</button>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span><i class="fa-solid fa-globe"></i> <span data-i18n="settings_language">Bahasa</span></span>
+        <select id="settings-language" class="settings-select">
+          <option value="id">Bahasa Indonesia</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <div class="settings-info-block">
+        <strong><i class="fa-solid fa-keyboard"></i> <span data-i18n="settings_controls_title">Kontrol</span></strong>
+        <p data-i18n="settings_controls_desc">PC: WASD gerak · drag mouse kamera · SPASI lempar/tarik<br>
+           HP: Joystick kiri gerak · geser layar kamera · tombol hijau lempar/tarik</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  CREDITS PANEL (shared)      ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <div id="modal-credits" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-heart"></i> <span data-i18n="credits_title">Kredit</span></h2>
+        <button id="btn-close-credits" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="credits-list">
+        <p><strong>Dibuat oleh:</strong> b1sam / abrisam.listiyo</p>
+        <p><strong>Engine:</strong> Three.js, Web Audio API</p>
+        <p class="credits-divider">Model 3D pihak ketiga (CC-BY-4.0):</p>
+        <p>• "Fishing Rods" — SymetrikGames</p>
+        <p>• "Stylized Old Fishing Rod Low Poly" — alexi.smnd</p>
+        <p>• "Chitin on Crab" — dini.hadiarti</p>
+        <p>• "Fire dragon minecraft" — DPancito</p>
+        <p>• "LP Dragon" — Liormax</p>
+        <p>• "Low Poly, Pixel art character" — iTalbone</p>
+        <p class="credits-divider">Terima kasih sudah bermain! 🎣</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="ui-overlay">
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TOP-LEFT: Player card       ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div class="hud-player-card">
+      <div id="hud-avatar-btn" class="hud-avatar" title="Edit Profil">
+        <img id="hud-avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b2836'/%3E%3Ccircle cx='32' cy='24' r='12' fill='%234FD1C5'/%3E%3Cellipse cx='32' cy='54' rx='20' ry='16' fill='%234FD1C5'/%3E%3C/svg%3E" alt="avatar">
+        <div class="hud-level-pip"><span id="player-level">1</span></div>
+      </div>
+      <div class="hud-player-info">
+        <div id="hud-player-name" class="hud-player-name">Pemancing</div>
+        <div class="hud-location"><i class="fa-solid fa-map-pin"></i> Lizard Cove</div>
+        <div class="hud-xp-wrap">
+          <div class="hud-xp-bar"><div id="xp-bar-fill" class="hud-xp-fill"></div></div>
+          <span id="xp-text" class="hud-xp-text">0 / 100 XP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TOP-RIGHT: coins + buttons  ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div class="hud-top-right">
+      <div class="hud-coins">
+        <i class="fa-solid fa-coins"></i>
+        <span id="coin-count">100</span>
+      </div>
+      <button id="btn-sound" class="hud-icon-btn"><i class="fa-solid fa-volume-high"></i></button>
+      <button id="btn-pause" class="hud-icon-btn"><i class="fa-solid fa-pause"></i></button>
+      <button id="btn-inventory" class="hud-nav-btn coral">
+        <i class="fa-solid fa-bag-shopping"></i><span data-i18n="hud_inventory">Tas</span>
+      </button>
+      <button id="btn-progress" class="hud-nav-btn coral">
+        <i class="fa-solid fa-bullseye"></i><span data-i18n="hud_progress">Progres</span>
+      </button>
+      <button id="btn-fishdex" class="hud-nav-btn cyan">
+        <i class="fa-solid fa-book-fish"></i><span data-i18n="fishdex_title">Fishdex</span>
+      </button>
+      <button id="btn-shop" class="hud-nav-btn gold">
+        <i class="fa-solid fa-store"></i><span data-i18n="hud_shop">Toko</span>
+      </button>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TOAST NOTIFICATION          ║ -->
+    <!-- ║  General alerts (achievement,║ -->
+    <!-- ║  errors, info) — compact,    ║ -->
+    <!-- ║  sits below the HUD buttons  ║ -->
+    <!-- ║  instead of blocking the     ║ -->
+    <!-- ║  center of the screen.       ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="toast-notification" class="toast-notification">
+      <div id="toast-icon" class="toast-icon">ℹ️</div>
+      <div id="toast-message" class="toast-message">Pesan</div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  BOTTOM-LEFT: equip info     ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div class="hud-equip">
+      <div class="hud-equip-row">
+        <i class="fa-solid fa-wand-magic-sparkles hud-equip-icon rod-col"></i>
+        <span id="rod-name" class="hud-equip-label">Kail Kayu Kadal</span>
+      </div>
+      <div class="hud-equip-row">
+        <i class="fa-solid fa-worm hud-equip-icon bait-col"></i>
+        <span id="bait-count" class="hud-equip-label">Cacing x20</span>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  BOTTOM-RIGHT: action bar    ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div class="hud-action-bar">
+      <div class="hud-slot" id="slot-rod" title="Pancingan [1]">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span class="hud-slot-key">1</span>
+      </div>
+      <div class="hud-slot" id="slot-bait" title="Umpan [2]">
+        <i class="fa-solid fa-worm"></i>
+        <span class="hud-slot-key">2</span>
+      </div>
+      <div class="hud-slot" id="slot-auto" title="Auto Cast [3]">
+        <i class="fa-solid fa-robot"></i>
+        <span class="hud-slot-key">3</span>
+      </div>
+      <button id="btn-cast-action" class="hud-cast-btn idle-pulse">
+        <i class="fa-solid fa-crosshairs"></i>
+        <span id="cast-btn-text" data-i18n="hud_cast_idle">LEMPAR KAIL</span>
+      </button>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  MOBILE JOYSTICK             ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="joystick-container" class="joystick-container">
+      <div id="joystick-base" class="joystick-base">
+        <div id="joystick-stick" class="joystick-stick"></div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  BOAT BONUS BADGE            ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="boat-bonus-badge" class="boat-bonus-badge hidden">
+      <i class="fa-solid fa-water"></i>
+      <span data-i18n="boat_bonus_badge">Bonus Ikan Langka Aktif</span>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  BOAT INTERACT PROMPT        ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <button id="btn-boat-interact" class="boat-interact-btn hidden">
+      <i class="fa-solid fa-anchor"></i>
+      <span id="boat-interact-label">Naik Kapal</span>
+    </button>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  NPC CHAT PROMPT              ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <button id="btn-npc-chat" class="npc-chat-btn hidden">
+      <i class="fa-solid fa-comment-dots"></i>
+      <span data-i18n="npc_chat_prompt">Ngobrol dengan Nelayan Tua</span>
+    </button>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  CAST POWER METER (center)   ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="cast-meter-container" class="cast-meter-wrap hidden">
+      <div class="cast-meter-label">KEKUATAN LEMPAR</div>
+      <div class="cast-meter-track">
+        <div id="cast-meter-fill" class="cast-meter-fill"></div>
+        <div class="cast-perfect-zone"></div>
+      </div>
+      <div class="cast-meter-hint">Lepas saat bar di zona hijau → PERFECT!</div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  CAST QUALITY popup          ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="cast-quality-popup" class="cast-quality-popup hidden">
+      <div id="cast-quality-text" class="cq-text">PERFECT!</div>
+      <div id="cast-quality-bonus" class="cq-bonus hidden">+50% XP &amp; +10 💰</div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  SHAKE BUTTON                ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <button id="shake-button" class="shake-btn hidden">
+      <i class="fa-solid fa-hand-point-up"></i>
+      <span>SHAKE!</span>
+      <small id="shake-progress">0/5</small>
+    </button>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  BITE ALERT                  ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="game-status-alert" class="bite-alert hidden">
+      <div id="status-icon" class="bite-icon">🎣</div>
+      <div id="status-message" class="bite-text">GIGITAN! TARIK!</div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  REELING MINIGAME            ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="reeling-minigame" class="reel-wrap hidden">
+      <div class="reel-title"><i class="fa-solid fa-fish-fins"></i> Jaga ikan di zona!</div>
+      <div class="reel-gauge">
+        <div id="reel-target-zone" class="reel-zone"></div>
+        <div id="reel-player-bar" class="reel-bar"></div>
+      </div>
+      <div class="reel-tension-wrap">
+        <span class="reel-tension-lbl">TEGANGAN</span>
+        <div class="reel-tension-track">
+          <div id="tension-fill" class="reel-tension-fill"></div>
+        </div>
+      </div>
+      <div class="reel-hint">Tahan SPASI / tombol cast untuk tarik</div>
+    </div>
+
+    <!-- hint -->
+    <div id="hint-banner" class="hint-banner" data-i18n="hint_banner">
+      <kbd>WASD</kbd> gerak &nbsp;·&nbsp; <kbd>drag</kbd> kamera &nbsp;·&nbsp; <kbd>SPASI</kbd> lempar/tarik &nbsp;·&nbsp; dekati kapal buat naik
+    </div>
+
+  </div><!-- /ui-overlay -->
+
+  <!-- ═══════════════════════════════════════════
+       MODALS
+  ═══════════════════════════════════════════ -->
+
+  <!-- Catch Modal -->
+  <div id="modal-catch" class="modal-backdrop hidden">
+    <div class="modal-box catch-card">
+      <div id="catch-jackpot-banner" class="catch-jackpot-banner hidden">
+        <i class="fa-solid fa-trophy"></i>
+        <span>TANGKAPAN LEGENDARIS! Tunjukkan layar hasil tangkapannya buat klaim hadiah <strong>Rp 2.500</strong>! Chat IG <a href="https://www.instagram.com/abrisam.listiyo" target="_blank" rel="noopener">@abrisam.listiyo</a> 🎉</span>
+      </div>
+      <div id="catch-boss-badge" class="catch-boss-badge hidden">🌟 Tangkapan Hebat!</div>
+      <span class="rarity-tag" id="catch-rarity">RARE</span>
+      <h2 class="catch-title" id="catch-name">Ikan</h2>
+      <div id="catch-preview-container" class="catch-preview">
+        <div class="catch-sparkle"></div>
+      </div>
+      <div class="catch-stats">
+        <div class="catch-stat" id="catch-weight-stat"><span>Berat</span><strong id="catch-weight">—</strong></div>
+        <div class="catch-stat" id="catch-condition-stat"><span>Kondisi</span><strong id="catch-condition">—</strong></div>
+        <div class="catch-stat"><span>Harga</span><strong class="gold" id="catch-price">—</strong></div>
+        <div class="catch-stat"><span>XP</span><strong class="purple" id="catch-xp">—</strong></div>
+      </div>
+      <p class="catch-desc" id="catch-desc"></p>
+      <div class="modal-actions">
+        <button id="btn-sell-fish" class="hd-nav-btn gold wide"><i class="fa-solid fa-coins"></i> Jual</button>
+        <button id="btn-keep-fish" class="hd-nav-btn wide"><i class="fa-solid fa-box"></i> Simpan ke Tas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Modal -->
+  <div id="modal-shop" class="modal-backdrop hidden">
+    <div class="modal-box shop-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-store"></i> <span data-i18n="shop_title">Toko</span></h2>
+        <button id="btn-close-shop" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-tab="rods" data-i18n="shop_tab_rods">🎣 Pancingan</button>
+        <button class="shop-tab" data-tab="baits" data-i18n="shop_tab_baits">🪱 Umpan</button>
+      </div>
+      <div class="shop-content">
+        <div id="shop-rods-list" class="shop-grid"></div>
+        <div id="shop-baits-list" class="shop-grid hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fishdex Modal -->
+  <div id="modal-fishdex" class="modal-backdrop hidden">
+    <div class="modal-box fishdex-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-book-fish"></i> <span data-i18n="fishdex_title">Fishdex</span></h2>
+        <button id="btn-close-fishdex" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fishdex-stats">
+        <span>Koleksi: <strong id="fishdex-count">0/15</strong></span>
+        <span>Terbesar: <strong id="fishdex-max-weight">0 kg</strong></span>
+      </div>
+      <div id="fishdex-grid" class="fishdex-grid"></div>
+    </div>
+  </div>
+
+  <!-- Progress Modal (Daily Mission + Achievements) -->
+  <div id="modal-progress" class="modal-backdrop hidden">
+    <div class="modal-box progress-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="progress_title">Progres</span></h2>
+        <button id="btn-close-progress" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="shop-tabs">
+        <button class="progress-tab active" data-tab="mission" data-i18n="progress_tab_mission">🎯 Misi Harian</button>
+        <button class="progress-tab" data-tab="achievements" data-i18n="progress_tab_achievements">🏅 Lencana</button>
+        <button class="progress-tab" data-tab="leaderboard" data-i18n="progress_tab_leaderboard">🏆 Papan Skor</button>
+      </div>
+
+      <div id="progress-mission-panel">
+        <p id="mission-label" class="mission-label">—</p>
+        <div class="mission-progress-track"><div id="mission-progress-fill" class="mission-progress-fill"></div></div>
+        <p id="mission-progress-text" class="mission-progress-text">0/0</p>
+        <button id="btn-claim-mission" class="hd-nav-btn gold wide" disabled>Klaim Hadiah</button>
+      </div>
+
+      <div id="progress-achievements-panel" class="hidden">
+        <div id="achievements-grid" class="fishdex-grid"></div>
+      </div>
+
+      <div id="progress-leaderboard-panel" class="hidden">
+        <p class="leaderboard-hint"><i class="fa-solid fa-circle-info"></i> Papan skor lokal berdasarkan total tangkapan (ikan + sampah).</p>
+        <div id="leaderboard-list" class="leaderboard-list"></div>
+      </div>
+
+      <div class="settings-footer">
+        <button id="btn-reset" class="reset-link"><i class="fa-solid fa-rotate-left"></i> Reset Progress</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventory Modal -->
+  <div id="modal-inventory" class="modal-backdrop hidden">
+    <div class="modal-box inventory-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-bag-shopping"></i> <span data-i18n="inventory_title">Tas Barang</span></h2>
+        <button id="btn-close-inventory" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="inventory-list" class="inventory-list"></div>
+      <div id="inventory-empty" class="inventory-empty hidden" data-i18n="inventory_empty">Tas kamu masih kosong. Yuk mancing dulu!</div>
+    </div>
+  </div>
+
+  <!-- Profile Setup Modal -->
+  <div id="modal-profile" class="modal-backdrop hidden">
+    <div class="modal-box profile-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-pen"></i> <span data-i18n="profile_title">Setup Profil</span></h2>
+        <button id="btn-close-profile" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="profile-avatar-picker">
+        <label for="profile-photo-input" class="profile-avatar-preview">
+          <img id="profile-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b2836'/%3E%3Ccircle cx='32' cy='24' r='12' fill='%234FD1C5'/%3E%3Cellipse cx='32' cy='54' rx='20' ry='16' fill='%234FD1C5'/%3E%3C/svg%3E" alt="preview">
+          <div class="profile-avatar-edit-badge"><i class="fa-solid fa-camera"></i></div>
+        </label>
+        <input type="file" id="profile-photo-input" accept="image/*" class="hidden">
+        <p class="profile-avatar-hint">Ketuk buat pilih foto dari galeri</p>
+      </div>
+
+      <div class="profile-status-card">
+        <h3 class="profile-status-title"><i class="fa-solid fa-chart-simple"></i> <span data-i18n="profile_status_title">Status Karakter</span></h3>
+        <div class="profile-status-grid">
+          <div class="profile-status-stat">
+            <span>Level</span>
+            <strong id="profile-status-level">1</strong>
+          </div>
+          <div class="profile-status-stat">
+            <span>Total Tangkapan</span>
+            <strong id="profile-status-catches">0</strong>
+          </div>
+          <div class="profile-status-stat">
+            <span>Koin</span>
+            <strong id="profile-status-coins">0</strong>
+          </div>
+        </div>
+        <div class="profile-status-rod">
+          <div class="profile-status-rod-name">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span id="profile-status-rodname">Kail Kayu Kadal</span>
+          </div>
+          <div class="rod-stats-display" id="profile-status-rodstats"></div>
+        </div>
+      </div>
+
+      <label class="profile-name-label" for="profile-name-input" data-i18n="profile_name_label">Nama Pemancing</label>
+      <input type="text" id="profile-name-input" class="profile-name-input" maxlength="16" placeholder="Masukkan nama kamu">
+
+      <button id="btn-save-profile" class="hd-nav-btn gold wide" data-i18n="profile_save">Simpan &amp; Mulai Main</button>
+    </div>
+  </div>
+
+  <!-- Tutorial / Onboarding Modal (shown once, first time playing) -->
+  <div id="modal-tutorial" class="modal-backdrop hidden">
+    <div class="modal-box tutorial-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-graduation-cap"></i> <span data-i18n="tutorial_title">Cara Bermain</span></h2>
+        <button id="btn-close-tutorial" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="tutorial-steps">
+        <div class="tutorial-step active" data-step="1">
+          <div class="tutorial-step-icon">🎯</div>
+          <h3>1. Lempar Kail</h3>
+          <p>Tekan &amp; tahan tombol <strong>LEMPAR KAIL</strong> sampai bar kekuatan ada di zona hijau, lalu lepas untuk cast <strong>PERFECT!</strong></p>
+        </div>
+        <div class="tutorial-step" data-step="2">
+          <div class="tutorial-step-icon">👋</div>
+          <h3>2. Shake</h3>
+          <p>Setelah umpan jatuh ke air, ketuk tombol <strong>SHAKE</strong> berkali-kali sampai progresnya penuh.</p>
+        </div>
+        <div class="tutorial-step" data-step="3">
+          <div class="tutorial-step-icon">🐟</div>
+          <h3>3. Hook</h3>
+          <p>Begitu muncul <strong>GIGITAN!</strong>, cepat tekan tombolnya untuk mengaitkan ikan sebelum kabur.</p>
+        </div>
+        <div class="tutorial-step" data-step="4">
+          <div class="tutorial-step-icon">🎣</div>
+          <h3>4. Reeling</h3>
+          <p>Tahan tombol untuk menjaga bar kuning tetap di zona hijau sampai progress penuh — ikan berhasil ditangkap!</p>
+        </div>
+      </div>
+
+      <div class="tutorial-dots">
+        <span class="tutorial-dot active" data-dot="1"></span>
+        <span class="tutorial-dot" data-dot="2"></span>
+        <span class="tutorial-dot" data-dot="3"></span>
+        <span class="tutorial-dot" data-dot="4"></span>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-tutorial-next" class="hd-nav-btn gold wide">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NPC Intro Dialog Modal (shown once, first time playing) -->
+  <div id="modal-npc-dialog" class="modal-backdrop hidden">
+    <div class="modal-box dialog-box">
+      <div class="dialog-npc-header">
+        <div class="dialog-npc-avatar">🧓</div>
+        <div class="dialog-npc-name">Nelayan Tua</div>
+      </div>
+      <p id="dialog-npc-text" class="dialog-npc-text">—</p>
+      <div id="dialog-npc-choices" class="dialog-npc-choices">
+        <button class="hd-nav-btn wide dialog-choice-btn" data-choice="yes">Ya, ceritain dong!</button>
+        <button class="hd-nav-btn wide dialog-choice-btn" data-choice="no">Nggak usah, aku mau mancing aja</button>
+      </div>
+      <div id="dialog-npc-continue" class="hidden">
+        <button id="btn-dialog-continue" class="hd-nav-btn gold wide">Mulai Memancing <i class="fa-solid fa-play"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Announcement Modal -->
+  <div id="modal-challenge" class="modal-backdrop hidden">
+    <div class="modal-box challenge-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-trophy"></i> Challenge Spesial!</h2>
+        <button id="btn-close-challenge" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p class="challenge-text">Coba tangkap salah satu ikan Mythic paling langka di game ini:</p>
+      <div class="challenge-fish-list">
+        <div class="challenge-fish-item">
+          <span class="challenge-fish-emoji">🐲</span>
+          <span><strong>Leviathan Sungai Glitch</strong> — naga air raksasa bersisik kristal ungu-neon</span>
+        </div>
+        <div class="challenge-fish-item">
+          <span class="challenge-fish-emoji">🌌</span>
+          <span><strong>Naga Kosmik Bintang</strong> — naga kosmik yang berpendar seperti galaksi</span>
+        </div>
+      </div>
+      <p class="challenge-reward">Dapat salah satunya? Tunjukkan layar hasil tangkapannya buat klaim hadiah <strong>Rp 2.500</strong>!<br>Chat lewat IG <a href="https://www.instagram.com/abrisam.listiyo" target="_blank" rel="noopener" class="challenge-ig-link">@abrisam.listiyo</a> 🎉</p>
+      <button id="btn-challenge-ok" class="hd-nav-btn gold wide">Oke, Siap Mancing!</button>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
